@@ -1,0 +1,11 @@
+---
+ - name: Print my name
+   shell: echo Hello xiaosha!
+
+ - name: Print env variable
+   shell: echo $PATH
+   register: print_result
+
+ - name: print message
+   debug:
+     msg: "{{ print_result.stdout_lines }}"
