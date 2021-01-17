@@ -30,7 +30,27 @@ aws ec2 describe-instances \
     --output text >> inventory
 ```
 
-## Use
+## Use Guide
+### Try out localhost
 `ansible-playbook main.yml`
 
+### Use EC2 to deploy a WebServer
+1. Query EC2 and write into inventory
+   ```bash
+   # prepare inventory file (create old one)
+   bash helper-scripts/prepare-inventory-file.sh inventory-ec2 --delete
+
+   # resolve EC2 IP
+   aws ec2 describe-instances \
+     --query 'Reservations[*].Instances[*].PublicIpAddress' \
+     --filters "Name=tag:project,Values=udacity" \
+     --output text >> inventory
+   ```
+
+2. Specify inventory file and SSH private key:
+`ansible-playbook main-ec2.yml -i inventory-ec2 --private-key my-key-pair-priv.pem`
+
 ## Trouble-shooting
+### Test if your host is accessible via SSH
+Take EC2 as example:
+`ssh -i my-key-pair-priv.pem ec2-user@ec2-host-name.amazonaws.com`
