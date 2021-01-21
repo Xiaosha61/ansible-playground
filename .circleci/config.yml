@@ -9,10 +9,35 @@ jobs:
       - run:
           name: Ensure backend infrastructure exist
           command: |
-            aws cloudformation deploy \
-              --template-file cloud-formation/template.yml \
-              --stack-name my-stack
+            echo cloudformation create stack ...
+            # aws cloudformation deploy \
+            #   --template-file cloud-formation/template.yml \
+            #   --stack-name my-stack
+            echo cloudformation destroy stack...
+            # aws cloudformation delete-stack --stack-name my-stack
+  configure_infrastructure:
+    docker:
+      - image: python:3.7-alpine3.11
+    steps:
+      - checkout
+      - add_ssh_keys: # add the private key to the host that runs the job
+          fingerprints: ["b5:b0:b9:a9:b1:f7:bd:66:c9:a6:5b:0b:6f:f9:f9:12"] # You can get this ID in the section where you registered the SSH Key
+      # - run:
+      #     name: add the EC2 to known-hosts
+      #     command: |
+      #       ssh-keyscan 54.244.148.54 >> ~/.ssh/known_hosts # note: the IP could change!! # TODO: write a script to grab the IP from inventory-ec2
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --update ansible # install the dependencies needed for your playbook
+      - run:
+          name: Configure server
+          command: |
+            export ANSIBLE_HOST_KEY_CHECKING=false # skip known-hosts checking
+            ansible-playbook -i inventory-ec2 main-ec2.yml
+
 workflows:
   my_workflow:
     jobs:
-      - create_infrastructure
+      # - create_infrastructure # note that this might deploy an AWS stack (remember to clean it up!)
+      - configure_infrastructure

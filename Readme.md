@@ -44,7 +44,7 @@ aws ec2 describe-instances \
    aws ec2 describe-instances \
      --query 'Reservations[*].Instances[*].PublicIpAddress' \
      --filters "Name=tag:project,Values=udacity" \
-     --output text >> inventory
+     --output text >> inventory-ec2
    ```
 
 2. Specify inventory file and SSH private key:
