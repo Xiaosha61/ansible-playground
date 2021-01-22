@@ -35,9 +35,29 @@ jobs:
           command: |
             export ANSIBLE_HOST_KEY_CHECKING=false # skip known-hosts checking
             ansible-playbook -i inventory-ec2 main-ec2.yml
-
+  smoke_test:
+    docker:
+      - image: alpine:latest 
+    steps:
+      - run: apk add --update curl
+      - run:
+          name: send GET to deployed web-server
+          command: |
+            URL="https://blog.udacity.com/"
+            BAD_URL="https://blog.bad.com/"
+            if curl -s --head ${BAD_URL}
+            then
+              echo "It worked!"
+              return 0
+            else
+              echo "It failed"
+              return 1
+            fi
 workflows:
   my_workflow:
     jobs:
       # - create_infrastructure # note that this might deploy an AWS stack (remember to clean it up!)
-      - configure_infrastructure
+      - configure_infrastructure # note this one requires a pre-deployed ec2 instance and update to inventory-ec2 file
+      - smoke_test:
+          requires:
+            - configure_infrastructure
