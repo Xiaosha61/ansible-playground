@@ -1,5 +1,15 @@
 version: 2.1
 
+commands:
+  destroy_environment:
+    steps:
+      - run:
+          name: Destroy infrastructure
+          command: |
+            echo cloudformation destroy stack...
+            # aws cloudformation delete-stack --stack-name my-stack-${CIRCLE_WORKFLOW_ID}
+          when: on_fail
+
 jobs:
   create_infrastructure:
     docker:
@@ -12,9 +22,13 @@ jobs:
             echo cloudformation create stack ...
             # aws cloudformation deploy \
             #   --template-file cloud-formation/template.yml \
-            #   --stack-name my-stack
-            echo cloudformation destroy stack...
-            # aws cloudformation delete-stack --stack-name my-stack
+            #   --stack-name my-stack-${CIRCLE_WORKFLOW_ID}
+      - run:
+          name: Make it Fail!
+          command: |
+            return 0
+      - destroy_environment
+
   configure_infrastructure:
     docker:
       - image: python:3.7-alpine3.11
@@ -56,8 +70,8 @@ jobs:
 workflows:
   my_workflow:
     jobs:
-      # - create_infrastructure # note that this might deploy an AWS stack (remember to clean it up!)
-      - configure_infrastructure # note this one requires a pre-deployed ec2 instance and update to inventory-ec2 file
-      - smoke_test:
-          requires:
-            - configure_infrastructure
+      - create_infrastructure # note that this might deploy an AWS stack (remember to clean it up!)
+      # - configure_infrastructure # note this one requires a pre-deployed ec2 instance and update to inventory-ec2 file
+      # - smoke_test:
+      #     requires:
+      #       - configure_infrastructure
