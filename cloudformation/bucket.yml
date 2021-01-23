@@ -1,0 +1,34 @@
+Parameters:
+  NAME:
+    Type: String
+Resources:
+  WebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${NAME}"
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: 404.html
+  WebsiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref 'WebsiteBucket'
+      PolicyDocument:
+        Statement:
+        - Sid: PublicReadForGetBucketObjects
+          Effect: Allow
+          Principal: '*'
+          Action: s3:GetObject
+          Resource: !Join ['', ['arn:aws:s3:::', !Ref 'WebsiteBucket', /*]]
+Outputs:
+  BucketName:
+    Description: The name of the S3 Bucket that was created
+    Value: !Ref WebsiteBucket
+    Export:
+      Name: S3-Bucket-Name # can be used to query the bucket name using `aws cloudformation list-exports`
+  BucketPolicy:
+    Description: Info about bucket policy
+    Value: !Ref WebsiteBucketPolicy
+    Export:
+      Name: S3-Bucket-Policy 
