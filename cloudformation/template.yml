@@ -6,7 +6,7 @@ Resources:
       SecurityGroups:
         - !Ref InstanceSecurityGroup
       KeyName: test-ssh-key-pair
-      ImageId: 'ami-005bdb005fb00e791' # you may need to find out what instance types are available in your region - use https://cloud-images.ubuntu.com/locator/ec2/
+      ImageId: 'ami-005bdb005fb00e791' # you may need to find out what instance types are available in your region - use https://us-west-2.console.aws.amazon.com/ec2/v2/home?region=us-west-2#Images:visibility=public-images;platform=ubuntu
       InstanceType: t2.micro
   InstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup

@@ -6,6 +6,7 @@ CircleCI helps to:
   - a pipeline is composed of a workflow which contains jobs
   - .circleci/config.yml will be referred by CircleCI
   - CircleCI will take care of assigning hosts in specific docker image named in the config file to run the workflow
+  - focus on what to run.
  
 Ansible is to:
   - define a bunch of roles
@@ -13,6 +14,7 @@ Ansible is to:
   - playbook.yml can be used by `ansible-playbook` to orchestrate a workflow
   - ansible user needs to point ansible to the right hosts that are supposed to run the ansible workflow (using inventory file)
   - an ansible task flow can be triggered inside a job of CircleCI.
+  - focus on what the host should be able to do, it contains a lot of steps to configure the host. That's why it is a configuration tool.
 
 ## Prerequisite
 ### Install ansible on MacOS
