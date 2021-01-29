@@ -1,0 +1,162 @@
+version: 2.1
+
+commands:
+  destroy_environment:
+    steps:
+      - run:
+          name: Destroy infrastructure
+          command: |
+            echo cloudformation destroy stack...
+            # aws cloudformation delete-stack --stack-name my-stack-${CIRCLE_WORKFLOW_ID}
+          when: on_fail
+
+jobs:
+  create_and_deploy_front_end:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - run:
+          name: create aws stack that contains S3
+          command: |
+            aws cloudformation deploy \
+              --template-file cloudformation/bucket.yml \
+              --stack-name "xing-${CIRCLE_WORKFLOW_ID:0:7}" \ # ${CIRCLE_WORKFLOW_ID:0:7} takes the first 7 chars of the variable CIRCLE_CI_WORKFLOW_ID
+              --parameter-overrides PipelineID="xing-${CIRCLE_WORKFLOW_ID:0:7}"
+      - run: aws s3 sync ./cloudformation/files-to-deploy s3://"xing-${CIRCLE_WORKFLOW_ID:0:7}"
+
+  get_last_deployment_id: # the one you created manually!! (not in this config file) :)
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - run:
+          name: Write the stack deploymentId from the last job to workspace
+          command: |
+            aws cloudformation \
+              list-exports --query "Exports[?Name==\`PipelineID\`].Value" \
+              --no-paginate --output text > ~/old-bucket-name.txt # PipelineID
+            
+            # aws cloudformation \
+            #   list-exports --query "Exports[?Name==\`StackName\`].Value" \
+            #   --no-paginate --output text > ~/old-stack-name.txt
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - deployment_id.txt
+            # - stack_name.txt
+
+  promote_to_production:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - run:
+          name: Promote to Production
+          command: |
+            aws cloudformation deploy \
+              --template-file cloudformation/cloudfront.yml \
+              --stack-name production-distro \
+              --parameter-overrides PipelineID="xing-${CIRCLE_WORKFLOW_ID}"
+  clean_up_old_front_end:
+      docker:
+      - image: amazon/aws-cli
+      steps:
+        - checkout
+        - attach_workspace:
+            at: ~/
+        - run:
+            name: Clean up Old deployment
+            command: |
+              oldBucketName=$(cat ~/old-bucket-name.txt)
+              # oldStackName=$(cat ~/old-stack-name.txt)
+              echo $oldBucketName # $oldStackName
+              aws s3 rm "s3://${oldBucketName}" --recursive
+              aws cloudformation delete-stack --stack-name production-distro
+
+  create_infrastructure:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - run:
+          name: Ensure backend infrastructure exist
+          command: |
+            echo cloudformation create stack ...
+            # aws cloudformation deploy \
+            #   --template-file cloudformation/template.yml \
+            #   --stack-name my-stack-${CIRCLE_WORKFLOW_ID}
+      - run:
+          name: Make it Fail!
+          command: |
+            return 0
+      - destroy_environment
+
+  configure_infrastructure:
+    docker:
+      - image: python:3.7-alpine3.11
+    steps:
+      - checkout
+      - add_ssh_keys: # add the private key to the host that runs the job
+          fingerprints: ["b5:b0:b9:a9:b1:f7:bd:66:c9:a6:5b:0b:6f:f9:f9:12"] # You can get this ID in the section where you registered the SSH Key
+      # - run:
+      #     name: add the EC2 to known-hosts
+      #     command: |
+      #       ssh-keyscan 54.244.148.54 >> ~/.ssh/known_hosts # note: the IP could change!! # TODO: write a script to grab the IP from inventory-ec2
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --update ansible # install the dependencies needed for your playbook
+      - run:
+          name: Configure server
+          command: |
+            export ANSIBLE_HOST_KEY_CHECKING=false # skip known-hosts checking
+            ansible-playbook -i inventory-ec2 main-ec2.yml
+  smoke_test:
+    docker:
+      - image: alpine:latest 
+    steps:
+      - run: apk add --update curl
+      - run:
+          name: send GET to deployed web-server
+          command: |
+            URL="https://blog.udacity.com/"
+            BAD_URL="https://blog.bad.com/"
+            if curl -s --head ${BAD_URL}
+            then
+              echo "It worked!"
+              return 0
+            else
+              echo "It failed"
+              return 1
+            fi
+  print_hello_world:
+    docker:
+      - image: alpine:latest 
+    steps:
+      - run: echo hello world!!!
+workflows:
+  hello_world:
+    jobs:
+      - print_hello_world
+
+  # my_workflow:
+  #   jobs:
+      # - create_infrastructure # note that this might deploy an AWS stack (remember to clean it up!)
+      # - configure_infrastructure # note this one requires a pre-deployed ec2 instance and update to inventory-ec2 file
+      # - smoke_test:
+      #     requires:
+      #       - configure_infrastructure
+
+  # P4_L4_E28_workflow: # part4/Lesson4/Exercise28
+  #   # I firstly need to MANUALLY create a cloudfront stack using cloudfront-manual.yml
+  #   jobs:
+  #     - create_and_deploy_front_end
+  #     - get_last_deployment_id:
+  #         requires:
+  #           - create_and_deploy_front_end
+  #     - promote_to_production:
+  #         requires:
+  #           - get_last_deployment_id
+  #     - clean_up_old_front_end:
+  #         requires:
+  #           - promote_to_production
