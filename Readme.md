@@ -92,6 +92,9 @@ There is an obvious problem of deleting the stack inside the pipeline:
 - next time when I push my code, there's no longer such stack, which means in get_last_deployment_id I will not be able to get anything.
 For the exercise it's all fine, I just create a stack named `production-distro` beforehand. But in real product cycle, it should be just loopable. Maybe the stack just needs to be kept there, and only the s3 bucket should be deleted.
 
+### Other notes of useful instructions
+See [My Notes](MyNotes.md) to find out other useful instructions.
+
 ## Trouble-shooting
 ### Test if your host is accessible via SSH
 Take EC2 as example:
